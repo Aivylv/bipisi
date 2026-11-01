@@ -7,13 +7,35 @@ export async function getAllUsers(role) {
   return data.data // { total, users }
 }
 
-export async function createAccount({ role, nama, noTelp, extraField, kelasId }) {
-  const { data } = await api.post('/user', { role, nama, noTelp, extraField, kelasId })
+export async function createAccount({
+  role,
+  nama,
+  noTelp,
+  extraField,
+  kelasId,
+  bulanMulai,
+  tahunMulai,
+  bulanSelesai,
+  tahunSelesai,
+  nominal,
+}) {
+  const { data } = await api.post('/user', {
+    role,
+    nama,
+    noTelp,
+    extraField,
+    kelasId,
+    bulanMulai,
+    tahunMulai,
+    bulanSelesai,
+    tahunSelesai,
+    nominal,
+  })
   return data.data // { id, role, nama, token_akses_asli }
 }
 
-export async function updateUserData(id, { role, nama, noTelp, extraField }) {
-  const { data } = await api.put(`/user/${id}`, { role, nama, noTelp, extraField })
+export async function updateUserData(id, { nama, noTelp, extraField }) {
+  const { data } = await api.put(`/user/${id}`, { nama, noTelp, extraField })
   return data.data
 }
 
