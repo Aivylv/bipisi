@@ -1,6 +1,6 @@
 import AdminLayout from '../../layouts/AdminLayout';
 import { adminKelasStats } from '../../data/dummy';
-import { createKelas, deleteKelas, getAllKelas } from '../../services/kelasService';
+import { createKelas, deleteKelas, getAllKelas, updateKelas } from '../../services/kelasService';
 import AddKelasCard from '../../components/admin/AddKelasCard';
 import { 
   Plus, Users, School, BookOpen, AlertTriangle,
@@ -17,6 +17,7 @@ export default function DaftarKelas() {
   const [submitting, setSubmitting] = useState(false);
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState('');
+  const [editingKelas, setEditingKelas] = useState(null);
   const [deletingKelasId, setDeletingKelasId] = useState(null);
   const [deleteError, setDeleteError] = useState('');
   const [refreshVersion, setRefreshVersion] = useState(0);
@@ -70,6 +71,27 @@ export default function DaftarKelas() {
       setRefreshVersion((version) => version + 1);
     } catch (requestError) {
       setCreateError(getRequestError(requestError, 'Gagal menambahkan kelas.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateKelas = async (kelasData) => {
+    if (!editingKelas) return;
+
+    setSubmitting(true);
+    setCreateError('');
+    setCreateSuccess('');
+
+    try {
+      const updatedKelas = await updateKelas(editingKelas.id, kelasData);
+      setKelasList((currentKelas) => currentKelas.map((kelas) => (
+        kelas.id === editingKelas.id ? { ...kelas, ...updatedKelas } : kelas
+      )));
+      setEditingKelas(null);
+      setCreateSuccess('Data kelas berhasil diperbarui.');
+    } catch (requestError) {
+      setCreateError(getRequestError(requestError, 'Gagal memperbarui kelas.'));
     } finally {
       setSubmitting(false);
     }
@@ -225,7 +247,12 @@ export default function DaftarKelas() {
                     <td className="p-4 text-sm text-gray-600">{kelas.waliKelas}</td>
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                        <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition" title="Edit">
+                        <button
+                          onClick={() => { setCreateError(''); setEditingKelas(kelas); }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition"
+                          title="Edit kelas"
+                          aria-label={`Edit kelas ${kelas.nama_kelas}`}
+                        >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
@@ -271,8 +298,19 @@ export default function DaftarKelas() {
 
       {addKelasOpen && (
         <AddKelasCard
+          mode="create"
           onClose={() => setAddKelasOpen(false)}
           onSubmit={handleCreateKelas}
+          submitting={submitting}
+          error={createError}
+        />
+      )}
+      {editingKelas && (
+        <AddKelasCard
+          mode="edit"
+          initialData={editingKelas}
+          onClose={() => setEditingKelas(null)}
+          onSubmit={handleUpdateKelas}
           submitting={submitting}
           error={createError}
         />

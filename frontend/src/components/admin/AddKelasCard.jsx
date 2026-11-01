@@ -1,9 +1,20 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
 
-export default function AddKelasCard({ onClose, onSubmit, submitting, error }) {
-  const [namaKelas, setNamaKelas] = useState('')
-  const [jenjang, setJenjang] = useState('')
+export default function AddKelasCard({
+  mode = 'create',
+  initialData,
+  onClose,
+  onSubmit,
+  submitting,
+  error,
+}) {
+  const [namaKelas, setNamaKelas] = useState(initialData?.nama_kelas ?? '')
+  const [jenjang, setJenjang] = useState(initialData?.jenjang ?? '')
+  const hasChanges = mode === 'edit' && (
+    namaKelas.trim() !== (initialData?.nama_kelas ?? '').trim()
+    || jenjang !== (initialData?.jenjang ?? '')
+  )
 
   const handleSubmit = (event) => {
     event.preventDefault()
@@ -20,8 +31,12 @@ export default function AddKelasCard({ onClose, onSubmit, submitting, error }) {
       >
         <div className="mb-6 flex items-start justify-between">
           <div>
-            <h2 id="add-kelas-title" className="text-xl font-bold text-gray-900">Tambah Kelas</h2>
-            <p className="mt-1 text-sm text-gray-500">Masukkan nama kelas dan pilih jenjang.</p>
+            <h2 id="add-kelas-title" className="text-xl font-bold text-gray-900">
+              {mode === 'edit' ? 'Edit Kelas' : 'Tambah Kelas'}
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              {mode === 'edit' ? 'Perbarui nama kelas atau jenjang.' : 'Masukkan nama kelas dan pilih jenjang.'}
+            </p>
           </div>
           <button
             type="button"
@@ -46,7 +61,7 @@ export default function AddKelasCard({ onClose, onSubmit, submitting, error }) {
               title="Gunakan huruf, angka, spasi, titik, tanda hubung, atau kurung."
               className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             />
-            <span className="mt-1 block text-xs font-normal text-gray-500">Maksimal 50 karakter.</span>
+            <span className="mt-1 block text-xs font-normal text-gray-500">Contoh: 6A Reguler.</span>
           </label>
 
           <label className="block text-sm font-medium text-gray-700">
@@ -76,10 +91,10 @@ export default function AddKelasCard({ onClose, onSubmit, submitting, error }) {
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || (mode === 'edit' && !hasChanges)}
               className="rounded-lg bg-indigo-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-800 disabled:cursor-wait disabled:opacity-60"
             >
-              {submitting ? 'Menyimpan...' : 'Simpan kelas'}
+              {submitting ? 'Menyimpan...' : mode === 'edit' ? 'Simpan perubahan' : 'Simpan kelas'}
             </button>
           </div>
         </form>
