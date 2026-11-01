@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
-import { createAccount, deleteUserAccount, getAllUsers } from '../../services/userService';
+import {
+  createAccount,
+  deleteUserAccount,
+  getAllUsers,
+  updateAccessToken,
+  updateUserData,
+} from '../../services/userService';
 import { getErrorInfo } from '../../services/authService';
 import {
-  UserPlus, Search, Edit, Trash2, Key, Filter, ChevronDown
+  UserPlus, Search, Edit, Trash2, Key, Filter, ChevronDown, LoaderCircle, RefreshCw
 } from 'lucide-react';
 import AddUserModal from '../../components/admin/AddUserModal';
 import CreatedTokenModal from '../../components/admin/CreatedTokenModal';
@@ -25,9 +31,16 @@ export default function DaftarPengguna() {
   const [submitting, setSubmitting] = useState(false);
   const [createError, setCreateError] = useState('');
   const [createdToken, setCreatedToken] = useState('');
+  const [tokenModalTitle, setTokenModalTitle] = useState('Akun berhasil dibuat');
+  const [tokenModalDescription, setTokenModalDescription] = useState(
+    'Simpan token akses ini dan berikan kepada pengguna.'
+  );
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [deleteError, setDeleteError] = useState('');
+  const [editingUser, setEditingUser] = useState(null);
+  const [tokenUpdatingUserId, setTokenUpdatingUserId] = useState(null);
+  const [tokenError, setTokenError] = useState('');
   const requestKey = `${activeTab}:${refreshVersion}`;
   const loading = loadedRequest !== requestKey;
 
@@ -59,6 +72,8 @@ export default function DaftarPengguna() {
       }
 
       setAddModalOpen(false);
+      setTokenModalTitle('Akun berhasil dibuat');
+      setTokenModalDescription('Simpan token akses ini dan berikan kepada pengguna.');
       setCreatedToken(createdAccount.token_akses_asli);
       setActiveTab(account.role);
       setRefreshVersion((version) => version + 1);
@@ -68,6 +83,58 @@ export default function DaftarPengguna() {
         : requestError.message || getErrorInfo(requestError).message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUpdateAccount = async (account) => {
+    if (!editingUser) return;
+
+    setSubmitting(true);
+    setCreateError('');
+
+    try {
+      await updateUserData(editingUser.id, account);
+      setUsers((currentUsers) => currentUsers.map((user) => (
+        user.id === editingUser.id
+          ? { ...user, nama: account.nama, no_telp: account.noTelp, extraField: account.extraField }
+          : user
+      )));
+      setEditingUser(null);
+    } catch (requestError) {
+      setCreateError(getErrorInfo(requestError).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleOpenEdit = (user) => {
+    setCreateError('');
+    setEditingUser(user);
+  };
+
+  const handleRegenerateToken = async (user) => {
+    if (!window.confirm(`Buat token baru untuk ${user.nama ?? 'pengguna ini'}? Token lama akan langsung tidak berlaku.`)) {
+      return;
+    }
+
+    setTokenUpdatingUserId(user.id);
+    setTokenError('');
+
+    try {
+      const result = await updateAccessToken(user.id);
+      if (!result?.token_akses_baru_asli) {
+        throw new Error('Token baru tidak diterima dari server.');
+      }
+
+      setTokenModalTitle('Token akses berhasil diperbarui');
+      setTokenModalDescription('Simpan token baru ini dan berikan kepada pengguna. Token lama sudah tidak berlaku.');
+      setCreatedToken(result.token_akses_baru_asli);
+    } catch (requestError) {
+      setTokenError(requestError.response
+        ? getErrorInfo(requestError).message
+        : requestError.message || getErrorInfo(requestError).message);
+    } finally {
+      setTokenUpdatingUserId(null);
     }
   };
 
@@ -139,12 +206,29 @@ export default function DaftarPengguna() {
               <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg w-max">
                 <Key className="w-3.5 h-3.5 text-gray-500" />
                 <span className="text-sm font-mono font-semibold text-gray-700 tracking-wider">••••••••</span>
+                <button
+                  type="button"
+                  onClick={() => handleRegenerateToken(user)}
+                  disabled={tokenUpdatingUserId === user.id}
+                  className="ml-1 rounded p-1 text-gray-500 hover:bg-gray-200 hover:text-blue-700 disabled:cursor-wait disabled:opacity-50"
+                  title="Generasi ulang token"
+                  aria-label={`Generasi ulang token ${user.nama ?? 'pengguna'}`}
+                >
+                  {tokenUpdatingUserId === user.id
+                    ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                    : <RefreshCw className="h-3.5 w-3.5" />}
+                </button>
               </div>
             </td>
             <td className="p-4 text-sm text-gray-600 font-medium">{formatTanggal(user.created_at)}</td>
             <td className="p-4">
               <div className="flex items-center justify-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition" title="Edit">
+                <button
+                  onClick={() => handleOpenEdit(user)}
+                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition"
+                  title="Edit data"
+                  aria-label={`Edit ${user.nama ?? 'pengguna'}`}
+                >
                   <Edit className="w-4 h-4" />
                 </button>
                 <button
@@ -265,7 +349,9 @@ export default function DaftarPengguna() {
           </button>
         </div>
 
-        {deleteError && <p role="alert" className="p-4 text-sm text-red-600">{deleteError}</p>}
+        {(deleteError || tokenError) && (
+          <p role="alert" className="p-4 text-sm text-red-600">{deleteError || tokenError}</p>
+        )}
         {renderContent()}
 
         {/* Footer */}
@@ -287,8 +373,23 @@ export default function DaftarPengguna() {
           error={createError}
         />
       )}
+      {editingUser && (
+        <AddUserModal
+          mode="edit"
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSubmit={handleUpdateAccount}
+          submitting={submitting}
+          error={createError}
+        />
+      )}
       {createdToken && (
-        <CreatedTokenModal token={createdToken} onClose={() => setCreatedToken('')} />
+        <CreatedTokenModal
+          token={createdToken}
+          title={tokenModalTitle}
+          description={tokenModalDescription}
+          onClose={() => setCreatedToken('')}
+        />
       )}
     </AdminLayout>
   );
