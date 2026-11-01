@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
 import { adminKelasStats } from '../../data/dummy';
-import { createKelas, deleteKelas, getAllKelas } from '../../services/kelasService';
+import { createKelas, deleteKelas, getAllKelas, updateKelas } from '../../services/kelasService';
 import AddKelasCard from '../../components/admin/AddKelasCard';
 import { 
   Plus, Users, School, BookOpen, AlertTriangle,
@@ -28,6 +28,7 @@ export default function DaftarKelas() {
   const [submitting, setSubmitting] = useState(false);
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState('');
+  const [editingKelas, setEditingKelas] = useState(null);
   const [deletingKelasId, setDeletingKelasId] = useState(null);
   const [deleteError, setDeleteError] = useState('');
   const [refreshVersion, setRefreshVersion] = useState(0);
@@ -86,6 +87,27 @@ export default function DaftarKelas() {
     }
   };
 
+  const handleUpdateKelas = async (kelasData) => {
+    if (!editingKelas) return;
+
+    setSubmitting(true);
+    setCreateError('');
+    setCreateSuccess('');
+
+    try {
+      const updatedKelas = await updateKelas(editingKelas.id, kelasData);
+      setKelasList((currentKelas) => currentKelas.map((kelas) => (
+        kelas.id === editingKelas.id ? { ...kelas, ...updatedKelas } : kelas
+      )));
+      setEditingKelas(null);
+      setCreateSuccess('Data kelas berhasil diperbarui.');
+    } catch (requestError) {
+      setCreateError(getRequestError(requestError, 'Gagal memperbarui kelas.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleDeleteKelas = async (kelas) => {
     if (!window.confirm(`Hapus kelas "${kelas.nama_kelas}"?`)) return;
 
@@ -124,53 +146,6 @@ export default function DaftarKelas() {
         </button>
       </div>
 
-      {/* 4 Kartu Statistik */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {/* Total Siswa */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Siswa</p>
-            <h3 className="text-2xl font-bold text-gray-900">{adminKelasStats.totalSiswa}</h3>
-          </div>
-        </div>
-
-        {/* Total Kelas */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
-            <School className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Kelas</p>
-            <h3 className="text-2xl font-bold text-gray-900">{adminKelasStats.totalKelas}</h3>
-          </div>
-        </div>
-
-        {/* Rata-rata Kelas */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Rata-rata Kelas</p>
-            <h3 className="text-2xl font-bold text-gray-900">{adminKelasStats.rataRata}</h3>
-          </div>
-        </div>
-
-        {/* Kelas Penuh */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center text-red-600">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas Penuh</p>
-            <h3 className="text-2xl font-bold text-red-600">{adminKelasStats.kelasPenuh}</h3>
-          </div>
-        </div>
-      </div>
-
       {/* Tabel Daftar Kelas */}
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
         {createSuccess && <p role="status" className="border-b border-green-100 bg-green-50 p-4 text-sm text-green-700">{createSuccess}</p>}
@@ -184,14 +159,6 @@ export default function DaftarKelas() {
             </button>
           </div>
           
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition">
-              <FileUp className="w-4 h-4" /> Import Siswa
-            </button>
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition">
-              <FileDown className="w-4 h-4" /> Ekspor Data
-            </button>
-          </div>
         </div>
 
         {/* Tabel */}
@@ -249,7 +216,12 @@ export default function DaftarKelas() {
                     <td className="p-4 text-sm text-gray-600">{getWaliKelas(kelas)}</td>
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                        <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition" title="Edit">
+                        <button
+                          onClick={() => { setCreateError(''); setEditingKelas(kelas); }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition"
+                          title="Edit kelas"
+                          aria-label={`Edit kelas ${kelas.nama_kelas}`}
+                        >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
@@ -311,8 +283,19 @@ export default function DaftarKelas() {
 
       {addKelasOpen && (
         <AddKelasCard
+          mode="create"
           onClose={() => setAddKelasOpen(false)}
           onSubmit={handleCreateKelas}
+          submitting={submitting}
+          error={createError}
+        />
+      )}
+      {editingKelas && (
+        <AddKelasCard
+          mode="edit"
+          initialData={editingKelas}
+          onClose={() => setEditingKelas(null)}
+          onSubmit={handleUpdateKelas}
           submitting={submitting}
           error={createError}
         />
