@@ -4,8 +4,15 @@ import { getAllKelas } from '../../services/kelasService'
 import AddSiswaCard from './AddSiswaCard'
 import AddTentorCard from './AddTentorCard'
 
-export default function AddUserModal({ onClose, onSubmit, submitting, error }) {
-  const [role, setRole] = useState(null)
+export default function AddUserModal({
+  mode = 'create',
+  user,
+  onClose,
+  onSubmit,
+  submitting,
+  error,
+}) {
+  const [role, setRole] = useState(mode === 'edit' ? user?.role : null)
   const [kelasList, setKelasList] = useState([])
   const [kelasLoaded, setKelasLoaded] = useState(false)
   const [kelasError, setKelasError] = useState('')
@@ -19,7 +26,7 @@ export default function AddUserModal({ onClose, onSubmit, submitting, error }) {
   }
 
   useEffect(() => {
-    if (role !== 'siswa' || kelasLoaded) return undefined
+    if (mode !== 'create' || role !== 'siswa' || kelasLoaded) return undefined
 
     let active = true
 
@@ -53,22 +60,22 @@ export default function AddUserModal({ onClose, onSubmit, submitting, error }) {
     return () => {
       active = false
     }
-  }, [role, kelasLoaded])
+  }, [mode, role, kelasLoaded])
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4" role="presentation">
       <section role="dialog" aria-modal="true" aria-labelledby="add-user-title" className="my-auto w-full max-w-xl rounded-2xl bg-gray-50 p-5 shadow-2xl sm:p-7">
         <div className="mb-6 flex items-start justify-between">
           <div>
-            <h2 id="add-user-title" className="text-xl font-bold text-gray-900">Tambah Pengguna</h2>
-            <p className="mt-1 text-sm text-gray-500">Pilih jenis akun yang ingin dibuat.</p>
+            <h2 id="add-user-title" className="text-xl font-bold text-gray-900">{mode === 'edit' ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2>
+            <p className="mt-1 text-sm text-gray-500">{mode === 'edit' ? 'Ubah data profil pengguna.' : 'Pilih jenis akun yang ingin dibuat.'}</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Tutup" className="rounded-lg p-2 text-gray-400 hover:bg-white hover:text-gray-700">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {role === null ? (
+        {mode === 'create' && role === null ? (
           <div className="grid gap-4 sm:grid-cols-2">
             <button type="button" onClick={() => setRole('tentor')} className="rounded-2xl border border-blue-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-500 hover:shadow-md">
               <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
@@ -89,6 +96,8 @@ export default function AddUserModal({ onClose, onSubmit, submitting, error }) {
           </div>
         ) : role === 'tentor' ? (
           <AddTentorCard
+            mode={mode}
+            initialData={user}
             onSubmit={onSubmit}
             onBack={returnToRoleSelection}
             submitting={submitting}
@@ -96,6 +105,8 @@ export default function AddUserModal({ onClose, onSubmit, submitting, error }) {
           />
         ) : (
           <AddSiswaCard
+            mode={mode}
+            initialData={user}
             kelasList={kelasList}
             kelasLoading={kelasLoading}
             kelasError={kelasError}
