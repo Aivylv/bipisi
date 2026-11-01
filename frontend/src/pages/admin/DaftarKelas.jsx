@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import AdminLayout from '../../layouts/AdminLayout';
 import { adminKelasStats } from '../../data/dummy';
-import { getAllKelas } from '../../services/kelasService';
+import { createKelas, deleteKelas, getAllKelas } from '../../services/kelasService';
+import AddKelasCard from '../../components/admin/AddKelasCard';
 import { 
-  Plus, Users, School, BookOpen, AlertTriangle, 
-  Filter, FileUp, FileDown, Edit, Trash2, Info 
+  Plus, Users, School, BookOpen, AlertTriangle,
+  Filter, FileUp, FileDown, Edit, Trash2, Info, LoaderCircle
 } from 'lucide-react';
 
 const KAPASITAS_KELAS = 15;
@@ -23,6 +24,13 @@ export default function DaftarKelas() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [addKelasOpen, setAddKelasOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [createSuccess, setCreateSuccess] = useState('');
+  const [deletingKelasId, setDeletingKelasId] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -55,7 +63,49 @@ export default function DaftarKelas() {
     return () => {
       active = false;
     };
-  }, [page]);
+  }, [page, refreshVersion]);
+
+  const getRequestError = (requestError, fallback) =>
+    requestError.response?.data?.message || requestError.message || fallback;
+
+  const handleCreateKelas = async (kelas) => {
+    setSubmitting(true);
+    setCreateError('');
+    setCreateSuccess('');
+
+    try {
+      await createKelas(kelas);
+      setAddKelasOpen(false);
+      setCreateSuccess('Kelas berhasil ditambahkan.');
+      setPage(1);
+      setRefreshVersion((version) => version + 1);
+    } catch (requestError) {
+      setCreateError(getRequestError(requestError, 'Gagal menambahkan kelas.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteKelas = async (kelas) => {
+    if (!window.confirm(`Hapus kelas "${kelas.nama_kelas}"?`)) return;
+
+    setDeletingKelasId(kelas.id);
+    setDeleteError('');
+    setCreateSuccess('');
+
+    try {
+      await deleteKelas(kelas.id);
+      if (kelasList.length === 1 && page > 1) {
+        setPage((currentPage) => currentPage - 1);
+      } else {
+        setRefreshVersion((version) => version + 1);
+      }
+    } catch (requestError) {
+      setDeleteError(getRequestError(requestError, 'Gagal menghapus kelas.'));
+    } finally {
+      setDeletingKelasId(null);
+    }
+  };
 
   return (
     <AdminLayout>
@@ -66,7 +116,10 @@ export default function DaftarKelas() {
           <p className="text-gray-500 mt-1">Kelola data kelas yang berjalan di Pilar Cendekia.</p>
         </div>
         
-        <button className="flex items-center gap-2 px-5 py-2.5 bg-[#1E3A8A] text-white rounded-xl hover:bg-blue-900 transition text-sm font-semibold shadow-sm">
+        <button
+          onClick={() => { setCreateError(''); setCreateSuccess(''); setAddKelasOpen(true); }}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#1E3A8A] text-white rounded-xl hover:bg-blue-900 transition text-sm font-semibold shadow-sm"
+        >
           <Plus className="w-4 h-4" /> Tambah Kelas
         </button>
       </div>
@@ -120,6 +173,8 @@ export default function DaftarKelas() {
 
       {/* Tabel Daftar Kelas */}
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        {createSuccess && <p role="status" className="border-b border-green-100 bg-green-50 p-4 text-sm text-green-700">{createSuccess}</p>}
+        {deleteError && <p role="alert" className="border-b border-red-100 bg-red-50 p-4 text-sm text-red-700">{deleteError}</p>}
         
         {/* Toolbar Tabel */}
         <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -197,8 +252,16 @@ export default function DaftarKelas() {
                         <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition" title="Edit">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition" title="Hapus">
-                          <Trash2 className="w-4 h-4" />
+                        <button
+                          onClick={() => handleDeleteKelas(kelas)}
+                          disabled={deletingKelasId === kelas.id}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition disabled:cursor-wait disabled:opacity-50"
+                          title="Hapus kelas"
+                          aria-label={`Hapus kelas ${kelas.nama_kelas}`}
+                        >
+                          {deletingKelasId === kelas.id
+                            ? <LoaderCircle className="w-4 h-4 animate-spin" />
+                            : <Trash2 className="w-4 h-4" />}
                         </button>
                       </div>
                     </td>
@@ -245,6 +308,15 @@ export default function DaftarKelas() {
           <strong>Catatan Admin:</strong> Perubahan data kelas akan langsung berpengaruh pada dashboard pengajar dan siswa secara real-time. Periksa kapasitas kelas untuk menghindari penumpukan siswa.
         </p>
       </div>
+
+      {addKelasOpen && (
+        <AddKelasCard
+          onClose={() => setAddKelasOpen(false)}
+          onSubmit={handleCreateKelas}
+          submitting={submitting}
+          error={createError}
+        />
+      )}
 
     </AdminLayout>
   );
