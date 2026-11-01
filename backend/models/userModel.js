@@ -4,8 +4,60 @@ const crypto = require("crypto");
 const supabase = require("../config/supabaseClient");
 const AppError = require("../utils/AppError");
 
+const BULAN_INDONESIA = Object.freeze([
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+]);
+
+async function rollbackSiswaCreation(userId) {
+  const rollbackOperations = [
+    ["tagihan_spp", "siswa_id"],
+    ["kelas_siswa", "siswa_id"],
+    ["siswa_profile", "id"],
+    ["profiles", "id"],
+  ];
+  const errors = [];
+
+  for (const [table, column] of rollbackOperations) {
+    try {
+      const { error } = await supabase.from(table).delete().eq(column, userId);
+      if (error) errors.push(`${table}: ${error.message}`);
+    } catch (error) {
+      errors.push(`${table}: ${error.message || String(error)}`);
+    }
+  }
+
+  return errors;
+}
+
+function createMonthlyBills(siswaId, { bulanMulai, tahunMulai, bulanSelesai, tahunSelesai, nominal }) {
+  const start = tahunMulai * 12 + BULAN_INDONESIA.indexOf(bulanMulai);
+  const end = tahunSelesai * 12 + BULAN_INDONESIA.indexOf(bulanSelesai);
+  const bills = [];
+
+  for (let monthNumber = start; monthNumber <= end; monthNumber += 1) {
+    const year = Math.floor(monthNumber / 12);
+    const monthIndex = monthNumber % 12;
+    const month = BULAN_INDONESIA[monthIndex];
+    const dueDate = new Date(Date.UTC(year, monthIndex, 1)).toISOString().slice(0, 10);
+
+    bills.push({
+      siswa_id: siswaId,
+      nominal,
+      status: "Belum Bayar",
+      tanggal_jatuh_tempo: dueDate,
+      bulan_mulai: month,
+      tahun_mulai: year,
+      bulan_selesai: month,
+      tahun_selesai: year,
+    });
+  }
+
+  return bills;
+}
+
 class UserModel {
-  async createUserProfile({ role, tokenAkses, nama, noTelp, extraField, kelasId }) {
+  async createUserProfile({ role, tokenAkses, nama, noTelp, extraField, kelasId, tagihanSpp }) {
     if (role === "siswa") {
       const { data: kelas, error: kelasError } = await supabase
         .from("kelas")
@@ -33,35 +85,38 @@ class UserModel {
     }
 
     if (role === "siswa") {
-      const { error: siswaError } = await supabase
-        .from("siswa_profile")
-        .insert([{ id: userId, nama, no_telp: noTelp, nama_wali: extraField }]);
-
-      if (siswaError) {
-        throw AppError.internal(`Gagal simpan siswa_profile: ${siswaError.message}`);
-      }
-
-      const { error: kelasSiswaError } = await supabase
-        .from("kelas_siswa")
-        .insert([{ siswa_id: userId, kelas_id: kelasId }]);
-
-      if (kelasSiswaError) {
-        const { error: rollbackSiswaError } = await supabase
+      try {
+        const { error: siswaError } = await supabase
           .from("siswa_profile")
-          .delete()
-          .eq("id", userId);
-        const { error: rollbackProfileError } = await supabase
-          .from("profiles")
-          .delete()
-          .eq("id", userId);
-        const rollbackErrors = [rollbackSiswaError, rollbackProfileError].filter(Boolean);
+          .insert([{ id: userId, nama, no_telp: noTelp, nama_wali: extraField }]);
+
+        if (siswaError) {
+          throw AppError.internal(`Gagal simpan siswa_profile: ${siswaError.message}`);
+        }
+
+        const { error: kelasSiswaError } = await supabase
+          .from("kelas_siswa")
+          .insert([{ siswa_id: userId, kelas_id: kelasId }]);
+
+        if (kelasSiswaError) {
+          throw AppError.internal(`Gagal menghubungkan siswa ke kelas: ${kelasSiswaError.message}`);
+        }
+
+        const bills = createMonthlyBills(userId, tagihanSpp);
+        const { error: tagihanError } = await supabase
+          .from("tagihan_spp")
+          .insert(bills);
+
+        if (tagihanError) {
+          throw AppError.internal(`Gagal membuat tagihan SPP siswa: ${tagihanError.message}`);
+        }
+      } catch (error) {
+        const rollbackErrors = await rollbackSiswaCreation(userId);
         const rollbackMessage = rollbackErrors.length
-          ? ` Pembersihan akun gagal: ${rollbackErrors.map(({ message }) => message).join("; ")}`
+          ? ` Pembersihan akun gagal: ${rollbackErrors.join("; ")}.`
           : "";
 
-        throw AppError.internal(
-          `Gagal menghubungkan siswa ke kelas: ${kelasSiswaError.message}.${rollbackMessage}`
-        );
+        throw AppError.internal(`${error.message || String(error)}${rollbackMessage}`);
       }
     } else if (role === "tentor") {
       const { error: tentorError } = await supabase
@@ -106,13 +161,20 @@ class UserModel {
       await supabase.from("profiles").update({ role }).eq("id", userId);
     }
 
-    const { data: profileData } = await supabase
+    const { data: profileData, error: profileError } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", userId)
       .single();
 
-    const userRole = role || profileData?.role;
+    if (profileError) {
+      if (profileError.code === "PGRST116") {
+        throw AppError.notFound("Pengguna tidak ditemukan.");
+      }
+      throw AppError.internal(`Gagal mengambil profil pengguna: ${profileError.message}`);
+    }
+
+    const userRole = role || profileData.role;
 
     if (userRole === "siswa") {
       const updateData = {};
@@ -120,24 +182,30 @@ class UserModel {
       if (noTelp) updateData.no_telp = noTelp;
       if (extraField) updateData.nama_wali = extraField;
 
-      const { error } = await supabase
+      const { data: updatedSiswa, error } = await supabase
         .from("siswa_profile")
         .update(updateData)
-        .eq("id", userId);
+        .eq("id", userId)
+        .select("id")
+        .maybeSingle();
 
       if (error) throw AppError.internal(`Gagal update siswa: ${error.message}`);
+      if (!updatedSiswa) throw AppError.notFound("Profil siswa tidak ditemukan.");
     } else if (userRole === "tentor") {
       const updateData = {};
       if (nama) updateData.nama = nama;
       if (noTelp) updateData.no_telp = noTelp;
       if (extraField) updateData.alamat = extraField;
 
-      const { error } = await supabase
+      const { data: updatedTentor, error } = await supabase
         .from("tentor_profile")
         .update(updateData)
-        .eq("id", userId);
+        .eq("id", userId)
+        .select("id")
+        .maybeSingle();
 
       if (error) throw AppError.internal(`Gagal update tentor: ${error.message}`);
+      if (!updatedTentor) throw AppError.notFound("Profil tentor tidak ditemukan.");
     }
 
     return { id: userId, message: "Profil berhasil diperbarui" };
@@ -171,6 +239,7 @@ class UserModel {
         created_at: p.created_at,
         nama: p.siswa_profile?.nama ?? p.tentor_profile?.nama ?? null,
         no_telp: p.siswa_profile?.no_telp ?? p.tentor_profile?.no_telp ?? null,
+        extraField: p.siswa_profile?.nama_wali ?? p.tentor_profile?.alamat ?? null,
         kelas: kelasSiswa ? { id: kelasSiswa.id, nama: kelasSiswa.nama_kelas } : null,
       };
     });
