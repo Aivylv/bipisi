@@ -1,8 +1,24 @@
 import { useState } from 'react'
 import { ArrowLeft, UserRoundPlus } from 'lucide-react'
 
-export default function AddTentorCard({ onSubmit, onBack, submitting, error }) {
-  const [form, setForm] = useState({ nama: '', noTelp: '', extraField: '' })
+export default function AddTentorCard({
+  initialData,
+  mode = 'create',
+  onSubmit,
+  onBack,
+  submitting,
+  error,
+}) {
+  const [form, setForm] = useState({
+    nama: initialData?.nama ?? '',
+    noTelp: initialData?.no_telp ?? '',
+    extraField: initialData?.extraField ?? '',
+  })
+  const hasChanges = mode === 'edit' && (
+    form.nama.trim() !== (initialData?.nama ?? '').trim()
+    || form.noTelp.trim() !== (initialData?.no_telp ?? '').trim()
+    || form.extraField.trim() !== (initialData?.extraField ?? '').trim()
+  )
 
   const updateField = (event) => {
     const { name, value } = event.target
@@ -21,16 +37,18 @@ export default function AddTentorCard({ onSubmit, onBack, submitting, error }) {
 
   return (
     <form onSubmit={handleSubmit} className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm">
-      <button type="button" onClick={onBack} className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-blue-700">
-        <ArrowLeft className="h-4 w-4" /> Pilih jenis pengguna
-      </button>
+      {mode === 'create' && (
+        <button type="button" onClick={onBack} className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-blue-700">
+          <ArrowLeft className="h-4 w-4" /> Pilih jenis pengguna
+        </button>
+      )}
       <div className="mb-6 flex items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
           <UserRoundPlus className="h-5 w-5" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-gray-900">Tambah Guru / Tentor</h3>
-          <p className="text-sm text-gray-500">Isi data profil tentor untuk membuat akun.</p>
+          <h3 className="text-lg font-bold text-gray-900">{mode === 'edit' ? 'Edit Data Guru / Tentor' : 'Tambah Guru / Tentor'}</h3>
+          <p className="text-sm text-gray-500">{mode === 'edit' ? 'Perbarui data profil tentor.' : 'Isi data profil tentor untuk membuat akun.'}</p>
         </div>
       </div>
 
@@ -51,8 +69,8 @@ export default function AddTentorCard({ onSubmit, onBack, submitting, error }) {
 
       {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       <div className="mt-6 flex justify-end">
-        <button type="submit" disabled={submitting} className="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60">
-          {submitting ? 'Membuat akun...' : 'Buat akun tentor'}
+        <button type="submit" disabled={submitting || (mode === 'edit' && !hasChanges)} className="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60">
+          {submitting ? (mode === 'edit' ? 'Menyimpan...' : 'Membuat akun...') : (mode === 'edit' ? 'Simpan perubahan' : 'Buat akun tentor')}
         </button>
       </div>
     </form>

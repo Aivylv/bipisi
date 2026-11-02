@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { Check, Copy, KeyRound, X } from 'lucide-react'
 
-export default function CreatedTokenModal({ token, onClose }) {
+export default function CreatedTokenModal({
+  token,
+  title = 'Akun berhasil dibuat',
+  description = 'Simpan token akses ini dan berikan kepada pengguna.',
+  onClose,
+}) {
   const [copyError, setCopyError] = useState('')
   const [copied, setCopied] = useState(false)
 
@@ -26,8 +31,8 @@ export default function CreatedTokenModal({ token, onClose }) {
               <KeyRound className="h-5 w-5" />
             </div>
             <div>
-              <h2 id="created-token-title" className="text-lg font-bold text-gray-900">Akun berhasil dibuat</h2>
-              <p className="text-sm text-gray-500">Simpan token akses ini dan berikan kepada pengguna.</p>
+              <h2 id="created-token-title" className="text-lg font-bold text-gray-900">{title}</h2>
+              <p className="text-sm text-gray-500">{description}</p>
             </div>
           </div>
           <button type="button" onClick={onClose} aria-label="Tutup" className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700">

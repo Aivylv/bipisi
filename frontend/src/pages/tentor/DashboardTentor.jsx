@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import TentorLayout from '../../layouts/TentorLayout';
+import DashboardLayout from '../../layouts/DashboardLayout';
 import { sesiTentor, dummySiswaTentor } from '../../data/dummy';
 import { 
   Plus, Calendar, Clock, Edit, Trash2, 
@@ -11,7 +11,7 @@ export default function DashboardTentor() {
   const [isModalNilaiOpen, setIsModalNilaiOpen] = useState(false);
 
   return (
-    <TentorLayout>
+    <DashboardLayout>
       {/* Header Halaman */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
@@ -194,6 +194,6 @@ export default function DashboardTentor() {
         </div>
       )}
 
-    </TentorLayout>
+    </DashboardLayout>
   );
 }

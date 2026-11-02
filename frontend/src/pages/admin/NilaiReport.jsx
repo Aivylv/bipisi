@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import AdminLayout from '../../layouts/AdminLayout';
+import DashboardLayout from '../../layouts/DashboardLayout';
 import { detailNilaiSiswa, dummyCatatanWali } from '../../data/dummy';
 import { 
   Download, Sparkles, Edit3, Save, ArrowLeft, 
@@ -18,7 +18,7 @@ export default function NilaiReport() {
   };
 
   return (
-    <AdminLayout>
+    <DashboardLayout>
       {/* Tombol Back ke Daftar Kelas */}
       <Link to="/admin/kelas" className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-blue-600 mb-6 transition">
         <ArrowLeft className="w-4 h-4" /> Kembali ke Daftar Kelas
@@ -141,6 +141,6 @@ export default function NilaiReport() {
       <div className="text-center mt-8 text-xs text-gray-400">
         &copy; 2026 Pilar Cendekia Education Management System. All Rights Reserved.
       </div>
-    </AdminLayout>
+    </DashboardLayout>
   );
 }
