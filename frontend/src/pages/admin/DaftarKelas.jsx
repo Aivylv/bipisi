@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import AdminLayout from '../../layouts/AdminLayout';
+import DashboardLayout from '../../layouts/DashboardLayout';
 import { adminKelasStats } from '../../data/dummy';
 import { createKelas, deleteKelas, getAllKelas, updateKelas } from '../../services/kelasService';
 import AddKelasCard from '../../components/admin/AddKelasCard';
@@ -130,7 +130,7 @@ export default function DaftarKelas() {
   };
 
   return (
-    <AdminLayout>
+    <DashboardLayout>
       {/* Header Halaman */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
@@ -301,6 +301,6 @@ export default function DaftarKelas() {
         />
       )}
 
-    </AdminLayout>
+    </DashboardLayout>
   );
 }

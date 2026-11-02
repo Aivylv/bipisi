@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import AdminLayout from '../../layouts/AdminLayout';
+import DashboardLayout from '../../layouts/DashboardLayout';
 import {
   createAccount,
   deleteUserAccount,
@@ -292,7 +292,7 @@ export default function DaftarPengguna() {
   };
 
   return (
-    <AdminLayout>
+    <DashboardLayout>
       {/* Header Halaman */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
@@ -391,6 +391,6 @@ export default function DaftarPengguna() {
           onClose={() => setCreatedToken('')}
         />
       )}
-    </AdminLayout>
+    </DashboardLayout>
   );
 }

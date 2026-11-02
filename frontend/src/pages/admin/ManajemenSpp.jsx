@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import AdminLayout from '../../layouts/AdminLayout';
+import DashboardLayout from '../../layouts/DashboardLayout';
 import { dummySppAdmin, dummySiswaDropdown } from '../../data/dummy';
 import { 
   PlusCircle, Search, FileText, CheckCircle2, XCircle, 
@@ -20,7 +20,7 @@ export default function ManajemenSpp() {
   };
 
   return (
-    <AdminLayout>
+    <DashboardLayout>
       {/* Header Halaman */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Manajemen SPP</h1>
@@ -187,6 +187,6 @@ export default function ManajemenSpp() {
         </div>
 
       </div>
-    </AdminLayout>
+    </DashboardLayout>
   );
 }
