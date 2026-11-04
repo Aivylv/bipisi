@@ -89,7 +89,6 @@ router.get("/status", authorizeRoles("admin"), LaporanProgresController.getRepor
  *       409: { description: Konflik data laporan }
  */
 router.get("/", authorizeRoles("admin"), LaporanProgresController.getAll);
-router.post("/simpan", authorizeRoles("admin"), LaporanProgresController.create);
 router.post("/tambah", authorizeRoles("admin"), LaporanProgresController.create);
 
 router.get("/:id", authorizeRoles("admin"), LaporanProgresController.getById);
