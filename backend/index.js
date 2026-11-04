@@ -45,7 +45,6 @@ const swaggerOptions = {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
-          description: "Masukkan token JWT dengan format: Bearer <token>",
         },
       },
     },
@@ -67,7 +66,7 @@ app.get("/", (req, res) => {
   });
 });
 
-//sini routesnyaa 
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/kelas", kelasRoutes);
@@ -75,7 +74,7 @@ app.use("/api/spp", sppRoutes);
 app.use("/api/nilai", nilaiRoutes);
 app.use("/api/laporan", laporanProgresRoutes);
 
-//handling endpoint
+// Handling 404
 app.use((req, res) => {
   res.status(404).json({
     success: false,
