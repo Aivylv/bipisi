@@ -14,6 +14,7 @@ const TagihanSpp = lazy(() => import('./pages/siswa/TagihanSpp'))
 
 // tentor
 const DashboardTentor = lazy(()=> import('./pages/tentor/DashboardTentor'))
+const DetailKelasTentor = lazy(() => import('./pages/tentor/DetailKelasTentor'))
 
 // admin
 const DashboardAdmin = lazy(() => import('./pages/admin/DashboardAdmin'))
@@ -34,15 +35,14 @@ function PageLoader() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            
-            <Route element={<GuestRoute />}>
-              <Route path="/login" element={<LoginToken />} />
-              <Route path="/admin/login" element={<LoginAdmin />} />
-            </Route>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+        
+        {/* Rute Siswa */}
+        <Route path="/siswa" element={<DashboardSiswa />} />
+        <Route path="/siswa/nilai" element={<LaporanProgres />} />
+        <Route path="/siswa/spp" element={<TagihanSpp />} />
 
             <Route element={<ProtectedRoute roles={['admin']} />}>
               <Route path="/admin" element={<DashboardAdmin/>} />
@@ -54,6 +54,7 @@ export default function App() {
             
             <Route element={<ProtectedRoute roles={['tentor']} />}>
               <Route path="/tentor" element={<DashboardTentor />} />
+              <Route path="/tentor/kelas/:kelasId" element={<DetailKelasTentor />} />
             </Route>
 
             <Route element={<ProtectedRoute roles={['siswa']} />}>
@@ -67,6 +68,9 @@ export default function App() {
         </Suspense>
       </AuthProvider>
 
+        {/* Rute Tentor */}
+        <Route path="/tentor" element={<DashboardTentor />} />
+      </Routes>
     </BrowserRouter>
   )
 }
