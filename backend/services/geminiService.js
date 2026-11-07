@@ -143,6 +143,7 @@ async function generateStudentProgressReport({ student, grades = [], periode }) 
         const tanggal = item.tanggal ? `, Tanggal: ${item.tanggal}` : "";
         const nilai = item.nilai !== undefined && item.nilai !== null ? item.nilai : "-";
         const catatan = item.keterangan || item.catatan ? `, Catatan Tentor: "${item.keterangan || item.catatan}"` : "";
+        
         return `${idx + 1}. ${mapel}${materi} - Nilai: ${nilai}${tanggal}${catatan}`;
       })
       .join("\n");
