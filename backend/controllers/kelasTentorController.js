@@ -80,6 +80,11 @@ const KelasTentorController = {
         return sendSuccess(res, 200, { data: items, meta });
     }),
 
+    getMine: asyncHandler(async (req, res) => {
+        const data = await KelasTentorModel.getByTentorId(req.user.id);
+        return sendSuccess(res, 200, { data });
+    }),
+
     getById: asyncHandler(async (req, res) => {
         const data = await KelasTentorModel.getById(validateId(req.params));
         return sendSuccess(res, 200, { data });

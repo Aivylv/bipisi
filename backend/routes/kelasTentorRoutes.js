@@ -6,6 +6,21 @@ const router = express.Router();
 const KelasTentorController = require("../controllers/kelasTentorController");
 const { authenticateToken, authorizeRoles } = require("../middleware/authMiddleware");
 
+/**
+ * @swagger
+ * /kelas-tentor/my:
+ *   get:
+ *     summary: Daftar kelas yang diampu tentor yang sedang login (khusus Tentor)
+ *     tags: [Kelas-Tentor]
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: OK }
+ *       401: { description: Belum login }
+ *       403: { description: Bukan tentor }
+ */
+// Harus didefinisikan sebelum router.use(admin) di bawah.
+router.get("/my", authenticateToken, authorizeRoles("tentor"), KelasTentorController.getMine);
+
 router.use(authenticateToken, authorizeRoles("admin"));
 
 /**

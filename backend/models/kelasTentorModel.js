@@ -35,6 +35,20 @@ class KelasTentorModel {
         };
     }
 
+    static async getByTentorId(tentorId) {
+        const { data, error } = await supabase
+            .from(TABLE)
+            .select(`
+                ${COLUMNS},
+                kelas:kelas_id (id, nama_kelas, jenjang, kelas_siswa (id))
+            `)
+            .eq("tentor_id", tentorId)
+            .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        return data;
+    }
+
     static async getById(id) {
         const relation = await KelasTentorModel.#selectById(id);
         if (!relation) throw AppError.notFound(NOT_FOUND);
