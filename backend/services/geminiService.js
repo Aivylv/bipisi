@@ -91,7 +91,11 @@ async function callGenerateContentWithFallback(ai, contents, systemInstruction) 
         const result = await ai.models.generateContent({
           model,
           contents,
-          config: { systemInstruction },
+          config: { 
+            systemInstruction,
+            temperature: 0.7,
+            maxOutputTokens: 600,
+          },
         });
         return result;
       } catch (error) {
